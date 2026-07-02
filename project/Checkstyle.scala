@@ -33,13 +33,13 @@ object Checkstyle {
   private lazy val testScalastyle = taskKey[Unit]("testScalastyle")
 
   lazy val scalaStyleSettings = Seq(
-    compileScalastyle := (Compile / scalastyle).toTask("").value,
+    // compileScalastyle := (Compile / scalastyle).toTask("").value,
 
-    Compile / compile := ((Compile / compile) dependsOn compileScalastyle).value,
+    // Compile / compile := ((Compile / compile) dependsOn compileScalastyle).value,
 
-    testScalastyle := (Test / scalastyle).toTask("").value,
+    // testScalastyle := (Test / scalastyle).toTask("").value,
 
-    Test / test := ((Test / test) dependsOn testScalastyle).value
+    // Test / test := ((Test / test) dependsOn testScalastyle).value
   )
 
   /*

@@ -81,6 +81,19 @@ trait ClassicMergeExecutor extends MergeOutputGeneration {
     val touchedFilesAccum = new SetAccumulator[String]()
     spark.sparkContext.register(touchedFilesAccum, TOUCHED_FILES_ACCUM_NAME)
 
+    // scalastyle:off println
+    System.err.println(s"=== AKHIL [MERGE-FIND-1] findTouchedFiles START ===")
+    System.err.println(s"=== AKHIL [MERGE-FIND-2] condition (ON clause): ${condition} ===")
+    matchedClauses.zipWithIndex.foreach { case (clause, i) =>
+      System.err.println(s"=== AKHIL [MERGE-FIND-3] matchedClause[$i] condition: ${clause.condition}, actions: ${clause.actions} ===")
+    }
+    notMatchedClauses.zipWithIndex.foreach { case (clause, i) =>
+      System.err.println(s"=== AKHIL [MERGE-FIND-3a] notMatchedClause[$i] condition: ${clause.condition}, actions: ${clause.actions} ===")
+    }
+    notMatchedBySourceClauses.zipWithIndex.foreach { case (clause, i) =>
+      System.err.println(s"=== AKHIL [MERGE-FIND-3b] notMatchedBySourceClause[$i] condition: ${clause.condition}, actions: ${clause.actions} ===")
+    }
+
     // Prune non-matching files if we don't need to collect them for NOT MATCHED BY SOURCE clauses.
     val dataSkippedFiles =
       if (notMatchedBySourceClauses.isEmpty) {
@@ -88,6 +101,11 @@ trait ClassicMergeExecutor extends MergeOutputGeneration {
       } else {
         deltaTxn.filterFiles(filters = Seq(Literal.TrueLiteral), keepNumRecords = true)
       }
+    System.err.println(s"=== AKHIL [MERGE-FIND-4] dataSkippedFiles count: ${dataSkippedFiles.size} (files that MIGHT contain matches) ===")
+    dataSkippedFiles.take(5).foreach { f =>
+      System.err.println(s"=== AKHIL [MERGE-FIND-4a]   file: ${f.path}, size: ${f.size}, records: ${f.numLogicalRecords} ===")
+    }
+    // scalastyle:on println
 
     // Join the source and target table using the merge condition to find touched files. An inner
     // join collects all candidate files for MATCHED clauses, a right outer join also includes
@@ -138,6 +156,13 @@ trait ClassicMergeExecutor extends MergeOutputGeneration {
     val joinToFindTouchedFiles =
       sourceDF.join(targetDF, Column(condition), joinType)
 
+    // scalastyle:off println
+    System.err.println(s"=== AKHIL [MERGE-FIND-5] joinType: ${joinType} ===")
+    System.err.println(s"=== AKHIL [MERGE-FIND-5a] sourceDF columns: ${sourceDF.columns.mkString(", ")} ===")
+    System.err.println(s"=== AKHIL [MERGE-FIND-5b] targetDF columns: ${targetDF.columns.mkString(", ")} ===")
+    System.err.println(s"=== AKHIL [MERGE-FIND-5c] columnsToDrop: ${columnsToDrop.mkString(", ")} ===")
+    // scalastyle:on println
+
     // UDFs to records touched files names and add them to the accumulator
     val recordTouchedFileName =
       DeltaUDF.intFromStringBoolean { (fileName, shouldRecord) =>
@@ -178,6 +203,13 @@ trait ClassicMergeExecutor extends MergeOutputGeneration {
 
     // Get the AddFiles using the touched file names.
     val touchedFileNames = touchedFilesAccum.value.iterator().asScala.toSeq
+    // scalastyle:off println
+    System.err.println(s"=== AKHIL [MERGE-FIND-6] touchedFileNames count: ${touchedFileNames.size} ===")
+    touchedFileNames.take(10).foreach { f =>
+      System.err.println(s"=== AKHIL [MERGE-FIND-6a]   touched: ${f} ===")
+    }
+    System.err.println(s"=== AKHIL [MERGE-FIND-7] hasMultipleMatches: ${hasMultipleMatches} ===")
+    // scalastyle:on println
     logTrace(s"findTouchedFiles: matched files:\n\t${touchedFileNames.mkString("\n\t")}")
 
     val nameToAddFileMap = generateCandidateFileMap(targetDeltaLog.dataPath, dataSkippedFiles)
@@ -332,6 +364,15 @@ trait ClassicMergeExecutor extends MergeOutputGeneration {
         "fullOuter"
       }
     }
+
+    // scalastyle:off println
+    System.err.println(s"=== AKHIL [MERGE-WRITE-1] writeAllChanges START ===")
+    System.err.println(s"=== AKHIL [MERGE-WRITE-2] filesToRewrite: ${filesToRewrite.size} files ===")
+    System.err.println(s"=== AKHIL [MERGE-WRITE-3] joinType: ${joinType} ===")
+    System.err.println(s"=== AKHIL [MERGE-WRITE-4] writeUnmodifiedRows: ${writeUnmodifiedRows} ===")
+    System.err.println(s"=== AKHIL [MERGE-WRITE-5] source columns: ${source.output.map(_.name).mkString(", ")} ===")
+    System.err.println(s"=== AKHIL [MERGE-WRITE-6] target columns: ${target.output.map(_.name).mkString(", ")} ===")
+    // scalastyle:on println
 
     logDebug(s"""writeAllChanges using $joinType join:
        |  source.output: ${source.outputSet}
